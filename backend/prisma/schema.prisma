@@ -1,0 +1,76 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../src/generated/client"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CLIENT
+  LAWYER
+}
+
+enum CaseStatus {
+  OPEN
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(uuid()) 
+  email        String   @unique
+  passwordHash String
+  role         Role
+  firstName    String
+  lastName     String
+  
+  // Relations
+  ownedCases       Case[]            @relation("CaseOwner")
+  grantedAccess    CasePermission[]  // Cases this lawyer can see
+  uploadedDocs     Document[]
+}
+
+model Case {
+  id           String      @id @default(uuid())
+  title        String
+  category     String
+  status       CaseStatus  @default(OPEN)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  ownerId      String
+  owner        User        @relation("CaseOwner", fields: [ownerId], references: [id])
+  permissions  CasePermission[] 
+  documents    Document[]
+}
+
+// THE SECURITY CORE:
+// Defines which lawyer sees which case.
+// Only the Case Owner (Client) can create records here.
+model CasePermission {
+  caseId    String
+  lawyerId  String
+  grantedAt DateTime @default(now())
+
+  case      Case     @relation(fields: [caseId], references: [id])
+  lawyer    User     @relation(fields: [lawyerId], references: [id])
+
+  @@id([caseId, lawyerId]) // Composite PK
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  originalName String   // "contract.pdf"
+  storageKey   String   // "uploads/cases/{caseId}/{randomUUID}.pdf" (Private)
+  mimeType     String
+  sizeBytes    Int
+  uploadedAt   DateTime @default(now())
+  
+  caseId       String
+  case         Case     @relation(fields: [caseId], references: [id])
+  uploadedBy   String
+  uploader     User     @relation(fields: [uploadedBy], references: [id])
+}
