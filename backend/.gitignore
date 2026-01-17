@@ -22,3 +22,6 @@ Thumbs.db
 .idea/
 
 docker-data/
+logs/*
+.paseto-private.pem
+.paseto-public.pem
